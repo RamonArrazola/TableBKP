@@ -1,0 +1,10 @@
+Env/
+*.csv
+test.py
+Notebook/
+__pycache__/
+*.pyc
+*.pyo
+EnvHNKCat/
+EnvHNKQnc/
+.idea/
