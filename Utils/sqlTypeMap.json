@@ -1,0 +1,23 @@
+{
+    "int": "Int64",
+    "bigint": "Int64",
+    "smallint": "Int64",
+    "tinyint": "Int64",
+    "bit": "boolean",
+    "float": "float64",
+    "real": "float64",
+    "decimal": "float64",
+    "numeric": "float64",
+    "money": "float64",
+    "smallmoney": "float64",
+    "date": "datetime64[ns]",
+    "datetime": "datetime64[ns]",
+    "datetime2": "datetime64[ns]",
+    "smalldatetime": "datetime64[ns]",
+    "char": "string",
+    "varchar": "string",
+    "text": "string",
+    "nchar": "string",
+    "nvarchar": "string",
+    "ntext": "string"
+}
