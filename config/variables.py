@@ -12,10 +12,6 @@ sqlTypeMap = os.path.join(base, '..', 'utils', 'sqlTypeMap.json')
 
 #Variaables para las peticiones al API  
 bearerToken = os.environ.get('bearerToken')
-# modelosTupla = os.environ.get('modelos')
-# modelos = modelosTupla.split(',') if modelosTupla else []
-# dbsTupla = os.environ.get('dbs')
-# dbs = dbsTupla.split(',') if dbsTupla else []
 modelos = [m.strip() for m in os.environ.get('modelos', '').split(',') if m.strip()]
 dbs = [d.strip() for d in os.environ.get('dbs', '').split(',') if d.strip()]
     
