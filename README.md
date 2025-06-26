@@ -28,7 +28,9 @@ En la terminal ejecuta:
 # Como funciona? 
 - Este Script se puede ejecutar desde CLI o haciendo doble click en el archivo *Ejecutar.bat*
 - Hace una consulta con joins a ICM 10 y SQL (ICM 9) para obtener la estructura de tablas, este query obtiene 
-nombres de campos, tipos de datos de los mismos, llaves primarias y llaves foraneas de la tabla e informacion general de la misma
+  nombres de campos, tipos de datos de los mismos, llaves primarias y llaves foraneas de la tabla e informacion general de la misma
+- Debido a que ICM se sobreescribirá, almacenamos el resultado del query de tablas en un CSV en una carpeta fuera de Code, si esta
+  carpeta no existe (O el archivo mismo) se hará la consulta a ICM, de lo contrario se usara el CSV (que funge como Backup)
 - Con la información lista de ambas fuentes hace una comparativa y detecta que tablas no estan registradas en SQL. 
 - Una vez obtenida una lista de tablas que no estan registradas en SQL genera un JSON anidado que contiene la estructura de las tablas listas a enviar al API de ICM 
 - Envia la peticion a ICM generando las tablas contenidas en la lista 

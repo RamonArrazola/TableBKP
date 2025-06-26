@@ -1,52 +1,84 @@
 from dotenv import load_dotenv
 import os
 
+#Variables de entorno
 base = os.path.dirname(os.path.abspath(__file__))
-dotenv_path = os.path.join(base, '..' , 'Env', '.Env')
+dotenv_path = os.path.join(base, '..', 'Env', '.Env')
 load_dotenv(dotenv_path)
+backupDir = os.path.join(base, '../..', 'TablesBackup')
 
-sqlTypeMap = os.path.join(base, '..' ,'utils', 'sqlTypeMap.json')
+#Diccionario de tipado de datos
+sqlTypeMap = os.path.join(base, '..', 'utils', 'sqlTypeMap.json')
 
-apiurl = os.environ.get('apiurl')
+#Variaables para las peticiones al API  
 bearerToken = os.environ.get('bearerToken')
-model = os.environ.get('model')
+# modelosTupla = os.environ.get('modelos')
+# modelos = modelosTupla.split(',') if modelosTupla else []
+# dbsTupla = os.environ.get('dbs')
+# dbs = dbsTupla.split(',') if dbsTupla else []
+modelos = [m.strip() for m in os.environ.get('modelos', '').split(',') if m.strip()]
+dbs = [d.strip() for d in os.environ.get('dbs', '').split(',') if d.strip()]
+    
+apiurl = os.environ.get('apiurl')
 
+queryTablesDesc = r"""SELECT 
+	CT."TableName",
+	CT."TableType",
+	CT."EffectiveDated",
+	--CT."RowVersion",
+	CC."ColumnName", 
+	CC."Type",
+	CC."Order",
+	CC."IsKey",
+	CPL."TableName" AS "PickListTableName",
+	CPL."ColumnName" AS "PickListColumnName",
+	CPL."Name" AS "PickListName",
+	CPL."FilterID",
+	PB."ElementID",
+	PB."Comment", 
+	PB."IsGlobal",
+	PB."ParentBlockID",
+	PB."X",
+	PB."Y",
+	PB."Width",
+	PB."Height",
+	PB."R",
+	PB."G",
+	PB."B",
+	--PB."_RowVersion" AS "BaseRowVersion",
+	PB."Name", 
+	PB."Type" AS "BaseType"
+FROM "CustomTable" CT
+INNER JOIN "CustomColumn" CC ON CC."TableName" = CT."TableName"
+LEFT JOIN "CustomPickList" CPL ON CPL."TableName" = CT."TableName"
+ AND CPL."ColumnName" = CC."ColumnName"
+LEFT JOIN(
+	SELECT 
+		T."ElementID",
+		T."TableName",
+		T."Comment", 
+		T."IsGlobal",
+		E."ParentBlockID",
+		E."X",
+		E."Y",
+		E."Width",
+		E."Height",
+		E."R",
+		E."G",
+		E."B",
+		--E."RowVersion",
+		B."Name", 
+		B."Type"
+	FROM "ComposerTable"  T
+	INNER JOIN "ComposerElement" E ON T."ElementID"  = E."ElementID"
+	INNER JOIN "BaseBlock" B ON B."BlockID" = E."ParentBlockID"
+	) PB ON PB."TableName" = CT."TableName" 
+ORDER BY CC."Order" ASC""" 
+
+#Variables para la conexion SQL
 sqlServer = os.environ.get('sqlServer')
-database = os.environ.get('database')
 uid = os.environ.get('uid')
 pwd = os.environ.get('pwd')
 
-conn_str = (f"mssql+pyodbc://{uid}:{pwd}@{sqlServer}/{database}?driver=ODBC+Driver+17+for+SQL+Server")
+#Variables para la generacion del engine de conexion SQL
 cnxn = None
-
-header = {
-    "Authorization": f"Bearer {bearerToken}",
-    "Content-Type": "application/json",
-    "Model": model
-}
-
-data = {
-    'offset': 0,
-    'limit': 0,
-}
-
-columns = ['TableName', 'TableType', 'ColumnName', 'Type', 'IsKey', 'TableName2', 'ColumnName1', 'Name', 'FilterID']
-
-parentBlockId = 1134
-
-bounds = {
-    "bounds": {
-        "x": -481.45000000000005,
-        "y": -7.449999999999989,
-        "width": 224,
-        "height": 180
-    }
-}
-
-queryTablesDesc = r"""SELECT * FROM "CustomTable" CT
-INNER JOIN "CustomColumn" CC
-ON CC."TableName" = CT."TableName"
-LEFT JOIN "CustomPickList" CPL
-ON CPL."TableName" = CT."TableName"
-AND CPL."ColumnName" = CC."ColumnName"
-ORDER BY CC."Order" ASC"""

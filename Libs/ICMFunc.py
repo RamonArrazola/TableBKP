@@ -1,10 +1,17 @@
-import pandas as pd
 import requests as rq
+import pandas as pd
 import json
 import os
 
-sqlTypeMap = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils', 'sqlTypeMap.json')
+sqlTypeMap = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'utils', 'sqlTypeMap.json')
 
+def getHeader(model: str, bearer: str):
+    header = {
+        "Authorization": f"Bearer {bearer}",
+        "Content-Type": "application/json",
+        "Model": model
+    }
+    return header
 
 def getPayload(query: str):
     data = {
