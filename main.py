@@ -7,22 +7,23 @@ import subprocess
 
 #///////////////////Validamos si existen tablas rechazadas de un a ejecución anterior
 for modelo in modelos:
-    if os.path.isfile(os.path.join(backupDir, modelo, 'Rechazadas.csv')):
+    if os.path.isfile(os.path.join(backupDir, modelo, 'RejectedTables.csv')):
         print(f"Existen tablas rechazadas de {modelo} de ejecuciones anteriores.")
-        if input("Deseas crear la tablas rechazadas? (S/N): ") == 'S':
-            subprocess.run(["python", os.path.join("Script", "Neuanfang.py")])
+        if input("Deseas crear la tablas rechazadas? (S/N): ") == 'S'.lower():
+            subprocess.run(["python", os.path.join("code", "Scripts", "Neuanfang.py")])
 
 #///////////////////PETICIONES de CONSULTA A ICM
 #Validamos si existe el backup, de lo contrario lo creamos (UTIL?)
-if not os.path.isdir(backupDir):
-    creaSubcarpetas(backupDir, modelos)
-    for modelo in modelos:
-        #Consulta de tablas ICM (Peticion al QueryTool del API)
-         #Generamos el header para la peticion
+
+for modelo in modelos:
+    if not os.path.isdir(os.path.join(backupDir, modelo)):
+        #Creamos la subcarpeta del modelo
+        creaSubcarpetas(backupDir, modelo)
+        #Generamos el header para la peticion de consulta
         header = getHeader(modelo, bearerToken)
-         #Generamos el payload para la peticion del query
+        #Generamos el payload para la peticion del query
         data = getPayload(queryTablesDesc)
-         #Hacemos la peticion al API
+        #Hacemos la peticion al API
         response = postQuery(apiurl, header, data)
         #Validamos la respuesta del API
         if response.status_code == 200:
@@ -31,10 +32,8 @@ if not os.path.isdir(backupDir):
             globals()['listaTablas' + modelo + 'ICM'] = construyeDF(pd.json_normalize(response.json()))
             #Almacenamos la consulta en el backup
             AlmacenaConsulta(backupDir, globals()['listaTablas' + modelo + 'ICM'], modelo)
-        else:
-            print(f"Ocurrio un error con {modelo}: {response.status_code} - {response.text}")
-else:   #Si el backup ya existe, lo leemos
-    for modelo in modelos:
+    #Si el backup del modelo ya existe, lo leemos
+    else:
         globals()['listaTablas' + modelo + 'ICM'] = pd.read_csv(os.path.join(backupDir, modelo, 'BackUpTablesStructure.csv'), sep=';')
 
 #///////////////////PETICIONES de CONSULTA A SQL
@@ -83,19 +82,23 @@ for modelo in modelos:
         #Validamos el estado de la respuesta
         if status == 201:
             print(f"Tabla {table} creada exitosamente.")
-        elif status == 0:
+        elif status == 200:
             print(f"Tabla {table} ya existe")
             continue
         else:
             print(f"Error al crear la tabla {table}.")
-            print(f"{status} - {status.text}")
+            print(f"{status}")
             #Almacenamos la tabla rechazada en una lista
             rechazadas.append(table)
+            #Generamos la subcarpeta para almacenar las tablas rechazadas
+            os.makedirs(os.path.join(backupDir, modelo, 'RejectedTables'), exist_ok=True)
             #Almacenamos el JSON de la estructura de la tabla
-            pd.to_json(tableStc, os.path.join(backupDir, modelo, 'RejectedTables', f"{table}.json"), orient='records', force_ascii=False)
-            continue
+            with open(os.path.join(backupDir, modelo, 'RejectedTables', table +'.json'), 'w', encoding='utf-8') as f:
+                json.dump(tableStc, f, ensure_ascii=False, indent=2)
 
-    if rechazadas.len() > 0:
+            continue 
+
+    if len(rechazadas) > 0:
         print(f"Las siguientes tablas de {modelo} no pudieron ser creadas: {', '.join(rechazadas)}")
         almacenaRechazadas(rechazadas, backupDir, InexistentesSQL, modelo)
         rechazadas = []  # Reiniciamos la lista de rechazadas para el siguiente modelo

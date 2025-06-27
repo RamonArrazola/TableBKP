@@ -1,3 +1,8 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from main import *
 
 #Neuanfang significa "nuevo comienzo", que puede implicar una segunda oportunidad.

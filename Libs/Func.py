@@ -76,11 +76,10 @@ def construyeTable(name: str, table: pd.DataFrame):
         }
     return jTable
 
-def creaSubcarpetas(dir: str, modelos: list):
-    os.makedirs(dir, exist_ok=True)
-    for modelo in modelos:
-        modelo_dir = os.path.join(dir, modelo)
-        os.makedirs(modelo_dir, exist_ok=True)
+def creaSubcarpetas(dir: str, modelo: str):
+    if not os.path.isdir(dir):
+        os.makedirs(dir, exist_ok=True)
+    os.makedirs(os.path.join(dir, modelo), exist_ok=True)
 
 def AlmacenaConsulta(base: str, df: pd.DataFrame, modelo: str):
     df.to_csv(os.path.join(base, modelo, 'BackUpTablesStructure.csv'),sep=';', index=False)
@@ -209,8 +208,6 @@ def xml_json(xml: str) -> dict:
     return source_dict
 
 def almacenaRechazadas(rechazadas: list, dir: str, df: pd.DataFrame, modelo: str):
-    #Generamos la subcarpeta para almacenar las tablas rechazadas
-    os.makedirs(os.path.join(dir, modelo, 'RejectedTables'), exist_ok=True)
     #Si no existe. crea un archivo .txt llamado Rejected.txt, de lo contrario lo sobreescribe
     if not os.path.exists(os.path.join(dir, modelo, 'RejectedTables', 'Rejected.txt')):
         with open(os.path.join(dir, modelo, 'RejectedTables', 'Rejected.txt'), 'w', encoding='utf-8') as f:
@@ -220,4 +217,4 @@ def almacenaRechazadas(rechazadas: list, dir: str, df: pd.DataFrame, modelo: str
     #Filtramos el DataFrame para obtener las tablas rechazadas
     rechazadasDF = df[df['TableName'].isin(rechazadas)].copy()
     #Guardamos el DataFrame de tablas rechazadas en un CSV
-    rechazadasDF.to_csv(os.path.join(dir, modelo, 'RejectedTables', 'RejectedTables.csv'), sep=';', index=False, encoding='utf-8')
+    rechazadasDF.to_csv(os.path.join(dir, modelo, 'RejectedTables.csv'), sep=';', index=False, encoding='utf-8')
