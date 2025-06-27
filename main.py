@@ -13,8 +13,6 @@ for modelo in modelos:
             subprocess.run(["python", os.path.join("code", "Scripts", "Neuanfang.py")])
 
 #///////////////////PETICIONES de CONSULTA A ICM
-#Validamos si existe el backup, de lo contrario lo creamos (UTIL?)
-
 for modelo in modelos:
     if not os.path.isdir(os.path.join(backupDir, modelo)):
         #Creamos la subcarpeta del modelo
@@ -97,7 +95,7 @@ for modelo in modelos:
                 json.dump(tableStc, f, ensure_ascii=False, indent=2)
 
             continue 
-
+    #Validamos si hay tablas rechazadas para el modelo actual
     if len(rechazadas) > 0:
         print(f"Las siguientes tablas de {modelo} no pudieron ser creadas: {', '.join(rechazadas)}")
         almacenaRechazadas(rechazadas, backupDir, InexistentesSQL, modelo)
