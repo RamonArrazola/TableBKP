@@ -3,6 +3,14 @@ from config.variables import *
 from Libs.ICMFunc import *
 from Libs.SQLFunc import *
 from Libs.Func import *
+import subprocess
+
+#///////////////////Validamos si existen tablas rechazadas de un a ejecución anterior
+for modelo in modelos:
+    if os.path.isfile(os.path.join(backupDir, modelo, 'Rechazadas.csv')):
+        print(f"Existen tablas rechazadas de {modelo} de ejecuciones anteriores.")
+        if input("Deseas crear la tablas rechazadas? (S/N): ") == 'S':
+            subprocess.run(["python", os.path.join("Script", "Neuanfang.py")])
 
 #///////////////////PETICIONES de CONSULTA A ICM
 #Validamos si existe el backup, de lo contrario lo creamos (UTIL?)
@@ -29,7 +37,7 @@ else:   #Si el backup ya existe, lo leemos
     for modelo in modelos:
         globals()['listaTablas' + modelo + 'ICM'] = pd.read_csv(os.path.join(backupDir, modelo, 'BackUpTablesStructure.csv'), sep=';')
 
-#///////////////////PETICIONES de CONSULTA A SQL 
+#///////////////////PETICIONES de CONSULTA A SQL
 #Conexion a SQL
 for db in dbs:
     try: 
@@ -49,6 +57,8 @@ for db in dbs:
             print(f"Conexion SQL a {db} Cerrada")
             cnxn = None
 
+#///////////////////Procesamiento de Tablas por cada Modelo
+#Iteramos por cada modelo 
 for modelo in modelos:
     #obtenemos el nombre homonimo del DF correspondiente
     db = obtieneHomonimo(modelo)
@@ -63,15 +73,29 @@ for modelo in modelos:
         #Construimos el json anidado con la estructura de la tabla
         tableStc = construyeTable(table, tableDF)
         #PRUEBAS Imprimimos la estructura de la tabla
-        print(json.dumps(tableStc))
+        print(json.dumps(tableStc))  #Comentar si no quieres ver la estructura de las tablas
+        
+#/////////////////////Peticiones para Crear las Tablas de ICM
         #Generamos el header para la peticion
         header = getHeader(modelo, bearerToken)
-
-        # #Mandamos la peticion para crear la tabla
+        #Mandamos la peticion para crear la tabla
         status = postTable(apiurl, header, tableStc)
         #Validamos el estado de la respuesta
         if status == 201:
             print(f"Tabla {table} creada exitosamente.")
+        elif status == 0:
+            print(f"Tabla {table} ya existe")
+            continue
         else:
             print(f"Error al crear la tabla {table}.")
+            print(f"{status} - {status.text}")
+            #Almacenamos la tabla rechazada en una lista
+            rechazadas.append(table)
+            #Almacenamos el JSON de la estructura de la tabla
+            pd.to_json(tableStc, os.path.join(backupDir, modelo, 'RejectedTables', f"{table}.json"), orient='records', force_ascii=False)
             continue
+
+    if rechazadas.len() > 0:
+        print(f"Las siguientes tablas de {modelo} no pudieron ser creadas: {', '.join(rechazadas)}")
+        almacenaRechazadas(rechazadas, backupDir, InexistentesSQL, modelo)
+        rechazadas = []  # Reiniciamos la lista de rechazadas para el siguiente modelo

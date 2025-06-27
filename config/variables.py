@@ -21,15 +21,14 @@ queryTablesDesc = r"""SELECT
 	CT."TableName",
 	CT."TableType",
 	CT."EffectiveDated",
-	--CT."RowVersion",
 	CC."ColumnName", 
 	CC."Type",
 	CC."Order",
 	CC."IsKey",
-	CPL."TableName" AS "PickListTableName",
-	CPL."ColumnName" AS "PickListColumnName",
-	CPL."Name" AS "PickListName",
+	CPD."Table" AS "PickListTableName",
+	CPD."Column" AS "PickListColumnName",
 	CPL."FilterID",
+	CFL."Query", 
 	PB."ElementID",
 	PB."Comment", 
 	PB."IsGlobal",
@@ -41,13 +40,20 @@ queryTablesDesc = r"""SELECT
 	PB."R",
 	PB."G",
 	PB."B",
-	--PB."_RowVersion" AS "BaseRowVersion",
 	PB."Name", 
 	PB."Type" AS "BaseType"
+---Informacion de la Tabla
 FROM "CustomTable" CT
+--Informacion de Columnas de la Tabla
 INNER JOIN "CustomColumn" CC ON CC."TableName" = CT."TableName"
+--Informacion General de Picklist en la Tabla
 LEFT JOIN "CustomPickList" CPL ON CPL."TableName" = CT."TableName"
  AND CPL."ColumnName" = CC."ColumnName"
+--Informacion General de las Dependencias de PickList
+LEFT JOIN "CustomPickListDependency" CPD ON CPD."PickListTable" = CPL."TableName"
+ AND CPD."PickListColumn" = CPL."ColumnName"
+LEFT JOIN "CustomPickListFilter" CFL ON CFL."ID" = CPL."FilterID"
+--Informacion General del Componente donde existe la tabla
 LEFT JOIN(
 	SELECT 
 		T."ElementID",
@@ -62,7 +68,6 @@ LEFT JOIN(
 		E."R",
 		E."G",
 		E."B",
-		--E."RowVersion",
 		B."Name", 
 		B."Type"
 	FROM "ComposerTable"  T
@@ -78,3 +83,6 @@ pwd = os.environ.get('pwd')
 
 #Variables para la generacion del engine de conexion SQL
 cnxn = None
+
+#Lista para almacenar las talablas rechazadas
+rechazadas = []

@@ -34,3 +34,9 @@ En la terminal ejecuta:
 - Con la información lista de ambas fuentes hace una comparativa y detecta que tablas no estan registradas en SQL. 
 - Una vez obtenida una lista de tablas que no estan registradas en SQL genera un JSON anidado que contiene la estructura de las tablas listas a enviar al API de ICM 
 - Envia la peticion a ICM generando las tablas contenidas en la lista 
+- Si la tabla no se puede crear (Motivos diferente a que la tabla ya exista) se almacenara la estructura del JSON 
+  y se almacenara en la carpeta de modelo correspondiente (Misma donde se almacenan los backups)
+- Si se repite una ejecucion previa a otra ejecucion con errores (Las tablas no se pudieron crear por algun motivo diferente a que ya existian) el script 
+  preguntara si se quiere reintentar la insercion de esas tablas, en caso de contestar S se ejecutara un subproceso que intentara volver a crear las tablas
+  si en este subproceso se logra crear la tabla, el programa eliminara de la lista de rechazadas a todas las tablas creadas, asi como su estructura JSON
+- Todas las tablas rechazadas por que ya existen simplemente se ignorarán
