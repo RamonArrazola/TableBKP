@@ -89,6 +89,11 @@ def obtieneHomonimo(modelo: str):
         homonimos = json.load(f)
     return homonimos.get(modelo, modelo)
 
+def obtienePRD(modelo: str):
+    with open(os.path.join(base, '..', 'utils', 'EvilTwinICM.json'), 'r') as f:
+        homonimos = json.load(f)
+    return homonimos.get(modelo, modelo)
+
 def del_xml_namespace(elem):
     # Elimina la línea de declaración XML
     elem = elem.lstrip().replace('<?xml version="1.0" encoding="utf-8"?>', '').lstrip()

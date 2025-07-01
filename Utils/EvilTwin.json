@@ -3,5 +3,10 @@
     "femcoepdev": "FEMCOEPSAP",
     "femcovsdev": "FEMCOVS",
     "femcocompdev": "FEMCOCOMP",
-    "XcaretDemoDEV": "FEMCO"
+    "XcaretDemoDEV": "FEMCO",
+    "femcocompprd": "FEMCOCOMP", 
+    "femcoprd": "FEMCO",
+    "femcoepprd": "FEMCOEPSAP",
+    "femcovsprd": "FEMCOVS",
+    "NOTA": "Los nombres de prd se tomaran como los nombres de SQL para no alterar el correcto funcionamiento del script."
 }

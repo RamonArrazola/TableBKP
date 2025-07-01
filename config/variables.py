@@ -10,9 +10,13 @@ backupDir = os.path.join(base, '../..', 'TablesBackup')
 #Diccionario de tipado de datos
 sqlTypeMap = os.path.join(base, '..', 'utils', 'sqlTypeMap.json')
 
+#ICM VS SQL? Variable para pruebas ICM vs SQL
+icmVsSql = False # Si es True, se comparan tablas de ICM Dev y Prod con SQL, si es False, solo se comparan tablas de ICM Dev y Prod entre si.
+
 #Variaables para las peticiones al API  
 bearerToken = os.environ.get('bearerToken')
-modelos = [m.strip() for m in os.environ.get('modelos', '').split(',') if m.strip()]
+modelosDev = [m.strip() for m in os.environ.get('modelosDev', '').split(',') if m.strip()]
+modelosPrd = [m.strip() for m in os.environ.get('modelosPrd', '').split(',') if m.strip()]
 dbs = [d.strip() for d in os.environ.get('dbs', '').split(',') if d.strip()]
     
 apiurl = os.environ.get('apiurl')
