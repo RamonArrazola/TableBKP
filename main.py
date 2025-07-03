@@ -53,7 +53,7 @@ else:  #El Backup de tablas final será ICM dev VS ICM Prod, por ende las petici
         if response.status_code == 200:
             print(f"Tablas de {modelo} obtenidas correctamente!")
             #Normalizamos la resupuesta y construimos el DataFrame
-            globals()['listaTablas' + re.sub(r'(dev|prd)', '', modelo, flags=re.IGNORECASE) + 'Destino'] = construyeDF(pd.json_normalize(response.json())) 
+            globals()['listaTablas' + re.sub(r'(dev|prd)', '', modelo, flags=re.IGNORECASE) + 'Destino'] = construyeDF(pd.json_normalize(response.json()))
 
 #////////////////////Validación y Creación de Carpetas en el Modelo ICM (Componentes)
 for modelo in modelosDev:
@@ -81,8 +81,6 @@ for modelo in modelosDev:
         tableDF = inexistentesSQL[inexistentesSQL['TableName'] == table].copy()
         #Construimos el json anidado con la estructura de la tabla
         tableStc = construyeTable(table, tableDF)
-        #PRUEBAS Imprimimos la estructura de la tabla
-        print(json.dumps(tableStc))  #Comentar si no quieres ver la estructura de las tablas
 
 #/////////////////////Peticiones para Crear las Tablas de ICM
         #Generamos el header para la peticion
