@@ -4,12 +4,12 @@ import pandas as pd
 import json
 import os
 
-def compareDataFrames(ICM: pd.DataFrame, SQL: pd.DataFrame):
-    #Tomando en cuenta que ICM siempre tendra mas registros que SQL 
-    diferentes = ICM[~ICM['Order'].isin(SQL['Order'])].copy()
+def compareDataFrames(origen: pd.DataFrame, destino: pd.DataFrame):
+    #Tomando en cuenta que el origen siempre tendra mas tablas que destino 
+    diferentes = origen[~origen['Order'].isin(destino['Order'])].copy()
     return diferentes
 
-def ListarInexistentesSQL(df: pd.DataFrame):
+def listarInexistentesSQL(df: pd.DataFrame):
     df = df['TableName'].unique()
     lista = df.tolist()
     return lista
@@ -17,7 +17,7 @@ def ListarInexistentesSQL(df: pd.DataFrame):
 def construyeTable(name: str, table: pd.DataFrame):
     #Generamos el bloque Columns
     columns = []
-    PickListFiltered= False
+    pickListFiltered = False
     #Si el DataFrame tiene en sus registros el campo EffStart_ o EffEnd_, los eliminamos
     if 'EffStart_' in table.columns:
         table = table.drop(columns=['EffStart_', 'EffEnd_'], errors='ignore')
@@ -40,9 +40,9 @@ def construyeTable(name: str, table: pd.DataFrame):
         #Si la tabla tiene un campo FilterID, lo agregamos como ReferencedName
         if 'Query' in row and pd.notna(row['Query']) and str(row['Query']).strip() != '':
             filtro = row['Query']
-            query = xml_json(filtro)
+            query = xmlJson(filtro)
             col["column"]["source"] = query
-            PickListFiltered = True
+            pickListFiltered = True
         #Aladimos la columna al bloque Columns
         columns.append(col)
     #Generamos el bloque Table
@@ -70,7 +70,7 @@ def construyeTable(name: str, table: pd.DataFrame):
         "parentBlockId": row['ParentBlockID'],
     }
     #Si la tabla tiene un campo PickList, agregamos el bloque AdditionalData
-    if PickListFiltered: 
+    if pickListFiltered: 
         jTable["AdditionalData"] = {
             "href": f"/api/v1/tableadditionaldata/{name}"
         }
@@ -81,7 +81,7 @@ def creaSubcarpetas(dir: str, modelo: str):
         os.makedirs(dir, exist_ok=True)
     os.makedirs(os.path.join(dir, modelo), exist_ok=True)
 
-def AlmacenaConsulta(base: str, df: pd.DataFrame, modelo: str):
+def almacenaConsulta(base: str, df: pd.DataFrame, modelo: str):
     df.to_csv(os.path.join(base, modelo, 'BackUpTablesStructure.csv'),sep=';', index=False)
 
 def obtieneHomonimo(modelo: str):
@@ -90,20 +90,20 @@ def obtieneHomonimo(modelo: str):
     return homonimos.get(modelo, modelo)
 
 def obtienePRD(modelo: str):
-    with open(os.path.join(base, '..', 'utils', 'EvilTwinICM.json'), 'r') as f:
+    with open(os.path.join(base, '..', 'utils', 'EvilTwin.json'), 'r') as f:
         homonimos = json.load(f)
-    return homonimos.get(modelo, modelo)
+    prd = homonimos.get(modelo, modelo)
+    return prd if prd != modelo else modelo
 
-def del_xml_namespace(elem):
+def delXmlNamespace(elem):
     # Elimina la línea de declaración XML
     elem = elem.lstrip().replace('<?xml version="1.0" encoding="utf-8"?>', '').lstrip()
     return elem
 
-
-def parse_select(select_elem):
+def parseSelect(selectElem):
     # Convierte un XML de definición de tabla a un diccionario Python con la estructura del bloque 'source'.
     items = []
-    for item in select_elem.findall('.//{*}select-item'):
+    for item in selectElem.findall('.//{*}select-item'):
         items.append({
             "column": item.findtext('{*}column'),
             "table": item.findtext('{*}table'),
@@ -112,10 +112,10 @@ def parse_select(select_elem):
         })
     return items
 
-def parse_where(where_elem):
+def parseWhere(whereElem):
     # Convierte la causa 'where' de la consulta, extrayendo restricciones y sus detalles.
     constraints = []
-    clause = where_elem.find('{*}clause') if where_elem is not None else None
+    clause = whereElem.find('{*}clause') if whereElem is not None else None
     if clause is not None:
         for constraint in clause.findall('{*}constraint'):
             constraints.append({
@@ -147,16 +147,16 @@ def parse_where(where_elem):
         "escapeWildcards": False
     }
 
-def parse_query(query_elem):
+def parseQuery(queryElem):
     # Convierte el nodo <query> en un diccionario con la estructura esperada.
-    select_elem = query_elem.find('{*}select')
-    from_elem = query_elem.find('{*}from')
-    where_elem = query_elem.find('{*}where')
+    selectElem = queryElem.find('{*}select')
+    fromElem = queryElem.find('{*}from')
+    whereElem = queryElem.find('{*}where')
     return {
-        "selectItems": parse_select(select_elem) if select_elem is not None else [],
-        "source": parse_from(from_elem) if from_elem is not None else {},
+        "selectItems": parseSelect(selectElem) if selectElem is not None else [],
+        "source": parseFrom(fromElem) if fromElem is not None else {},
         "joins": [],
-        "whereClause": parse_where(where_elem) if where_elem is not None else {
+        "whereClause": parseWhere(whereElem) if whereElem is not None else {
             "constraintType": "clause",
             "op": "and",
             "caseSensitive": False,
@@ -177,40 +177,40 @@ def parse_query(query_elem):
         "distinct": False
     }
 
-def parse_from(from_elem):
+def parseFrom(fromElem):
     # Convierte la sección 'from' de la consulta, identificando si es una subconsulta o una tabla.
-    query_elem = from_elem.find('.//{*}query') if from_elem is not None else None
-    if query_elem is not None:
+    queryElem = fromElem.find('.//{*}query') if fromElem is not None else None
+    if queryElem is not None:
         return {
-            "query": parse_query(query_elem),
-            "alias": from_elem.findtext('.//{*}alias'),
+            "query": parseQuery(queryElem),
+            "alias": fromElem.findtext('.//{*}alias'),
             "sourceType": "Query"
         }
-    table_elem = from_elem.find('.//{*}table') if from_elem is not None else None
-    if table_elem is not None:
+    tableElem = fromElem.find('.//{*}table') if fromElem is not None else None
+    if tableElem is not None:
         return {
-            "namespaceTable": {"name": table_elem.text},
-            "alias": from_elem.findtext('.//{*}alias'),
+            "namespaceTable": {"name": tableElem.text},
+            "alias": fromElem.findtext('.//{*}alias'),
             "sourceType": "Table"
         }
     return {}
 
-def xml_json(xml: str) -> dict:
+def xmlJson(xml: str) -> dict:
     # Eliminar la línea de declaración XML si existe
-    clean = del_xml_namespace(xml)
+    clean = delXmlNamespace(xml)
     #Formatear el XML para que sea compatible con ElementTree
     root = ET.fromstring(clean)
     # Buscar el primer query sin importar el namespace
-    query_elem = root.find('.//{*}query')
-    if query_elem is None:
+    queryElem = root.find('.//{*}query')
+    if queryElem is None:
         raise ValueError("No se encontró el nodo <query> en el XML.")
-    source_dict = {
+    sourceDict = {
         "source": {
-            "query": parse_query(query_elem),
+            "query": parseQuery(queryElem),
             "sourceNames": {}
         }
     }
-    return source_dict
+    return sourceDict
 
 def almacenaRechazadas(rechazadas: list, dir: str, df: pd.DataFrame, modelo: str):
     #Si no existe. crea un archivo .txt llamado Rejected.txt, de lo contrario lo sobreescribe
@@ -223,3 +223,43 @@ def almacenaRechazadas(rechazadas: list, dir: str, df: pd.DataFrame, modelo: str
     rechazadasDF = df[df['TableName'].isin(rechazadas)].copy()
     #Guardamos el DataFrame de tablas rechazadas en un CSV
     rechazadasDF.to_csv(os.path.join(dir, modelo, 'RejectedTables.csv'), sep=';', index=False, encoding='utf-8')
+
+def listaComponentes(df: pd.DataFrame):
+    #Obtenemos los campos unicos de la columna Name del DataFrame
+    carpetas = df['Name'].unique().tolist()
+    #Filtramos el DataFrame para obtener solo los registros que tienen un Name en la lista de carpetas, ademas de solo copiar los campos Name y ParentBlockID
+    componentes = df[df['Name'].isin(carpetas)][['Name', 'ParentBlockID']].drop_duplicates(subset=['Name']).copy()
+    #Generamos una columna nueva llamado AbueloBlockID
+    componentes['AbueloBlockID'] = None
+    #Nos quedamos solamente con las columnas Name, ParentBlockID y AbueloBlockID
+    return componentes
+
+def construyeComponente(name: str, parentBlockId: int): 
+    #Construimos el bloque blockDefinition
+    blockDefinition = {
+        "name": name
+    }
+    #Definimos el color de la carpeta
+    color =  {
+        "a": 255,
+        "b": 61,
+        "g": 188,
+        "r": 251
+    }
+    #Estructuramos el JSON basico para la carpeta
+    data = {
+        "blockDefinition": blockDefinition,
+        "parentBlockId": parentBlockId,
+        "color": color,
+        "isVisible": True
+    }
+
+    return data
+
+def actualizaParentBlock(df: pd.DataFrame, parche: pd.DataFrame):
+    #Iteramos por cada fila del DataFrame de tablas ICM
+    for row in parche.iterrows():
+        #Actualizamos el parentBlockId en el DataFrame de tablas ICM
+        df.loc[df['Name'] == row[1]['Name'], 'ParentBlockID'] = row[1]['ParentBlockID']
+    # Retornamos el DataFrame actualizado
+    return df

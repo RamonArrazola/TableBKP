@@ -2,7 +2,8 @@
 Este script es un prototipo fase 0 y será modificado varias veces hasta definir una version final
 
 # IMPORTANTE!
-Antes de ejecutar el script, **asegurate de estar conectado a la VPN correspondiente** y poseer las ligas de acceso en el archivo .Env
+Antes de ejecutar el script, asegurate de poseer las ligas de acceso en el archivo .Env
+Si vas a consultar hacia SQL **asegurate de estar conectado a la VPN correspondiente**
 
 # Previo a la ejecución
 El script usa varias librerias para ejecutar la conexion y procesamiento de resultados desde SQL y ICM, una de ellas es SQLAlchemy 
@@ -31,8 +32,10 @@ En la terminal ejecuta:
   nombres de campos, tipos de datos de los mismos, llaves primarias y llaves foraneas de la tabla e informacion general de la misma
 - Debido a que ICM se sobreescribirá, almacenamos el resultado del query de tablas en un CSV en una carpeta fuera de Code, si esta
   carpeta no existe (O el archivo mismo) se hará la consulta a ICM, de lo contrario se usara el CSV (que funge como Backup)
-- Con la información lista de ambas fuentes hace una comparativa y detecta que tablas no estan registradas en SQL. 
-- Una vez obtenida una lista de tablas que no estan registradas en SQL genera un JSON anidado que contiene la estructura de las tablas listas a enviar al API de ICM 
+- Con la información lista de ambas fuentes hace una comparativa y detecta que tablas no estan registradas en el modelo Origen. 
+- El script contempla la posibilidad que no exista el componente (o carptea) destino donde pertenece la tabla, si alguna tabla cae en 
+  este escenario el script se encargará de crear la carpeta
+- Una vez obtenida una lista de tablas que no estan registradas en el modelo Origen genera un JSON anidado que contiene la estructura de las tablas listas a enviar al API de ICM 
 - Envia la peticion a ICM generando las tablas contenidas en la lista 
 - Si la tabla no se puede crear (Motivos diferente a que la tabla ya exista) se almacenara la estructura del JSON 
   y se almacenara en la carpeta de modelo correspondiente (Misma donde se almacenan los backups)

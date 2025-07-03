@@ -1,10 +1,9 @@
-from sqlalchemy import create_engine
 from Libs.Neuanfang import Neuafang
 from config.variables import *
 from Libs.ICMFunc import *
 from Libs.SQLFunc import *
 from Libs.Func import *
-import subprocess
+import re
 
 #///////////////////Validamos si existen tablas rechazadas de un a ejecución anterior
 for modelo in modelosDev:
@@ -28,37 +27,22 @@ for modelo in modelosDev:
         if response.status_code == 200:
             print(f"Tablas de {modelo} obtenidas correctamente!")
             #Normalizamos la resupuesta y construimos el DataFrame
-            globals()['listaTablas' + modelo + 'ICM'] = construyeDF(pd.json_normalize(response.json()))
+            globals()['listaTablas' + re.sub(r'(dev|prd)', '', modelo, flags=re.IGNORECASE) + 'Origen'] = construyeDF(pd.json_normalize(response.json()))
             #Almacenamos la consulta en el backup
-            AlmacenaConsulta(backupDir, globals()['listaTablas' + modelo + 'ICM'], modelo)
+            almacenaConsulta(backupDir, globals()['listaTablas' + re.sub(r'(dev|prd)', '', modelo, flags=re.IGNORECASE) + 'Origen'], modelo)
     #Si el backup del modelo ya existe, lo leemos
     else:
-        globals()['listaTablas' + modelo + 'ICM'] = pd.read_csv(os.path.join(backupDir, modelo, 'BackUpTablesStructure.csv'), sep=';')
+        globals()['listaTablas' + re.sub(r'(dev|prd)', '', modelo, flags=re.IGNORECASE) + 'Origen'] = pd.read_csv(os.path.join(backupDir, modelo, 'BackUpTablesStructure.csv'), sep=';')
 
-#///////////////////PETICIONES de CONSULTA A SQL
-if icmVsSql:
-    #Conexion a SQL
+#/////////////////////Peticiones de consulta a Modelo Origen
+if icmVsSQL:
     for db in dbs:
-        try: 
-            #Obtenemos la cadena de conexion
-            conn_str = getConnStr(uid, pwd, sqlServer, db)
-            #Generamos el engine de conexion a SQL
-            cnxn = create_engine(conn_str)
-            if cnxn:
-                print(f"Conexion SQL a {db} Establecida")
-            else: 
-                print(f"Error al establecer la conexion SQL a {db}")
-            #Obtenermos la informacion desde SQL
-            globals()['listaTablas' + db + 'SQL'] = SQLQuery(cnxn, queryTablesDesc)
-        finally: #Cerramos la conexion y limpieamos el engine
-            if cnxn:
-                cnxn.dispose()
-                print(f"Conexion SQL a {db} Cerrada")
-                cnxn = None
-else: #El Backup de tablas final será ICM dev VS ICM Prod, por ende las peticiones y comparaciones a SQL son para entornos de pruebas a menos que asi se solicite
+        #Obtiene homonimo del modelo 
+        modelo = obtieneHomonimo(db)
+        #Genera el Dataframe desde SQL pero con el nombre del modelo ICM
+        globals()['listaTablas' + re.sub(r'(dev|prd)', '', modelo, flags=re.IGNORECASE) + 'Destino'] = consultaSQL(uid, pwd, sqlServer, db, queryTablesDesc)
+else:  #El Backup de tablas final será ICM dev VS ICM Prod, por ende las peticiones y comparaciones a SQL son para entornos de pruebas a menos que asi se solicite
     for modelo in modelosPrd:
-        #Se usaran los nombres de SQL para diferencias los dataframes origen vs el destino
-        db = obtieneHomonimo(modelo)
         #Generamos el header para la peticion de consulta
         header = getHeader(modelo, bearerToken)
         #Generamos el payload para la peticion del query
@@ -69,39 +53,47 @@ else: #El Backup de tablas final será ICM dev VS ICM Prod, por ende las peticio
         if response.status_code == 200:
             print(f"Tablas de {modelo} obtenidas correctamente!")
             #Normalizamos la resupuesta y construimos el DataFrame
-            globals()['listaTablas' + db + 'SQL'] = construyeDF(pd.json_normalize(response.json()))
+            globals()['listaTablas' + re.sub(r'(dev|prd)', '', modelo, flags=re.IGNORECASE) + 'Destino'] = construyeDF(pd.json_normalize(response.json()))
+
+#////////////////////Validación y Creación de Carpetas en el Modelo ICM (Componentes)
+for modelo in modelosDev:
+    #Listamos las carpetas (Componentes) existentes en csv con tablas de Origen
+    carpetasNecesarias = listaComponentes(globals()['listaTablas' + re.sub(r'(dev|prd)', '', modelo, flags=re.IGNORECASE) + 'Origen'])
+    #Validamos si existen las carpetas (Componentes) en el modelo destino y recibimos una lista de carpetas que no existen
+    components = validaComponentes(apiurl, bearerToken, modelo, carpetasNecesarias)
+    #Veficiamos si faltan carpetas en el modelo destino
+    if len(components) > 0: 
+        #Creamos las carpetas en el modelo destino
+        parche = creaComponentes(apiurl, bearerToken, modelo, components)
+        #Actualizamos el ParentBlockID en el DataFrame de tablas ICM Origen
+        actualizaParentBlock(globals()['listaTablas' + re.sub(r'(dev|prd)', '', modelo, flags=re.IGNORECASE) + 'Origen'], parche)
 
 #///////////////////Procesamiento de Tablas por cada Modelo
-#Iteramos por cada modelo 
+#Iteramos por cada modelo
 for modelo in modelosDev:
-    #obtenemos el nombre homonimo del DF correspondiente
-    db = obtieneHomonimo(modelo)
     #Comparacion de tabla ICM vs SQL
-    InexistentesSQL = compareDataFrames(globals()['listaTablas' + modelo + 'ICM'], globals()['listaTablas' + db + 'SQL'])
+    inexistentesSQL = compareDataFrames(globals()['listaTablas' + re.sub(r'(dev|prd)', '', modelo, flags=re.IGNORECASE) + 'Origen'], globals()['listaTablas' + re.sub(r'(dev|prd)', '', modelo, flags=re.IGNORECASE) + 'Destino'])
     #Obtenemos una lista de las tablas inexistentes en SQL
-    listaTablas = ListarInexistentesSQL(InexistentesSQL)
+    listaTablas = listarInexistentesSQL(inexistentesSQL)
     #Obtenemos la estrucutra de las tablas de ListaTablas
-    for table in listaTablas: 
+    for table in listaTablas:
         #Generamos el DataFrame de la tabla
-        tableDF = InexistentesSQL[InexistentesSQL['TableName'] == table].copy()
+        tableDF = inexistentesSQL[inexistentesSQL['TableName'] == table].copy()
         #Construimos el json anidado con la estructura de la tabla
         tableStc = construyeTable(table, tableDF)
         #PRUEBAS Imprimimos la estructura de la tabla
         print(json.dumps(tableStc))  #Comentar si no quieres ver la estructura de las tablas
-        
+
 #/////////////////////Peticiones para Crear las Tablas de ICM
         #Generamos el header para la peticion
-        if icmVsSql == False:
-            prd = obtienePRD(modelo)
-            header = getHeader(prd, bearerToken)
-        else: 
-            header = getHeader(modelo, bearerToken)
+        prd = obtieneHomonimo(modelo)
+        header = getHeader(prd, bearerToken)
         #Mandamos la peticion para crear la tabla
         status = postTable(apiurl, header, tableStc)
         #Validamos el estado de la respuesta
-        if status == 201:
+        if status.status_code == 201:
             print(f"Tabla {table} creada exitosamente.")
-        elif status == 200:
+        elif status.status_code == 200 or (hasattr(status, "status_text") and re.search(r"already exists\.?$")):
             print(f"Tabla {table} ya existe")
             continue
         else:
@@ -115,8 +107,8 @@ for modelo in modelosDev:
             with open(os.path.join(backupDir, modelo, 'RejectedTables', table +'.json'), 'w', encoding='utf-8') as f:
                 json.dump(tableStc, f, ensure_ascii=False, indent=2)
             continue
-    #Validamos si hay tablas rechazadas para el modelo actual
-    if len(rechazadas) > 0:
+    #Validamos si hay tablas rechazadas para el modelo actual (Solo aplica para ICM vs ICM, de lo contrario ya se habran almacenado las tablas )
+    if len(rechazadas) > 0 & icmVsSQL == False:
         print(f"Las siguientes tablas de {modelo} no pudieron ser creadas: {', '.join(rechazadas)}")
-        almacenaRechazadas(rechazadas, backupDir, InexistentesSQL, modelo)
+        almacenaRechazadas(rechazadas, backupDir, inexistentesSQL, modelo)
         rechazadas = []  # Reiniciamos la lista de rechazadas para el siguiente modelo

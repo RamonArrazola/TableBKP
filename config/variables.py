@@ -11,16 +11,16 @@ backupDir = os.path.join(base, '../..', 'TablesBackup')
 sqlTypeMap = os.path.join(base, '..', 'utils', 'sqlTypeMap.json')
 
 #ICM VS SQL? Variable para pruebas ICM vs SQL
-icmVsSql = False # Si es True, se comparan tablas de ICM Dev y Prod con SQL, si es False, solo se comparan tablas de ICM Dev y Prod entre si.
+icmVsSQL = False # Si es True, se comparan tablas de ICM Dev y Prod con SQL, si es False, solo se comparan tablas de ICM Dev y Prod entre si.
 
 #Variaables para las peticiones al API  
 bearerToken = os.environ.get('bearerToken')
 modelosDev = [m.strip() for m in os.environ.get('modelosDev', '').split(',') if m.strip()]
 modelosPrd = [m.strip() for m in os.environ.get('modelosPrd', '').split(',') if m.strip()]
 dbs = [d.strip() for d in os.environ.get('dbs', '').split(',') if d.strip()]
-    
 apiurl = os.environ.get('apiurl')
 
+#Query's para consulta de informacion 
 queryTablesDesc = r"""SELECT 
 	CT."TableName",
 	CT."TableType",
@@ -79,6 +79,7 @@ LEFT JOIN(
 	INNER JOIN "BaseBlock" B ON B."BlockID" = E."ParentBlockID"
 	) PB ON PB."TableName" = CT."TableName" 
 ORDER BY CC."Order" ASC""" 
+queryComponents = r"""SELECT * FROM "BaseBlock"""
 
 #Variables para la conexion SQL
 sqlServer = os.environ.get('sqlServer')

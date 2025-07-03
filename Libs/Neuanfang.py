@@ -1,24 +1,36 @@
-from config.variables import modelosDev, backupDir, bearerToken, apiurl, rechazadas
+from config.variables import modelosDev, backupDir, bearerToken, apiurl
 from Libs.ICMFunc import *
 import os
+import re
 
 # Neuanfang significa "nuevo comienzo",que implica una segunda oportunidad.
 def Neuafang():
+    rechazadas = []
+    #Recorremos los modelos origen
     for modelo in modelosDev:
-        with open(os.path.join(backupDir, modelo, 'RejectedTables', 'Rejected.txt'), 'w', encoding='utf-8') as f:
+        #Abrimos el txt en modo lectura
+        with open(os.path.join(backupDir, modelo, 'RejectedTables', 'Rejected.txt'), 'r', encoding='utf-8') as f:
+            #Saltamos la primera linea
+            next(f)
             for item in f:
-                rechazadas.append(item)
+                #Agregamos el contenido del txt a la lista de rechazadas
+                rechazadas.append(item.strip())
 
         for tabla in rechazadas:
             #Obtenemos la estrictura de la tabla desde la carpeta de rechazadas
-            structure = pd.read_json(os.path.join(backupDir, modelo, 'RejectedTables', f"{tabla}.json"), orient='records', force_ascii=False)
+            structure = pd.read_json(os.path.join(backupDir, modelo, 'RejectedTables', f"{tabla}.json"), orient='records')
             #Obtenemos el header para la peticion
             header = getHeader(modelo, bearerToken)
             #Mandamos la peticion para crear la tabla
             status = postTable(apiurl, header, structure)
 
-            if status == 201:
+            if status.status_code == 201:
                 print(f"Tabla {tabla} creada exitosamente.")
+                #Eliminamos el archivo de la tabla rechazada
+                os.remove(os.path.join(backupDir, modelo, 'RejectedTables', f"{tabla}.json"))
+                rechazadas.remove(tabla)
+            elif status.status_code == 200 or (hasattr(status, "status_text") and re.search(r"already exists\.?$", status.status_text.get("Message", ""))):
+                print(f"Tabla {tabla} ya existe")
                 #Eliminamos el archivo de la tabla rechazada
                 os.remove(os.path.join(backupDir, modelo, 'RejectedTables', f"{tabla}.json"))
                 rechazadas.remove(tabla)
