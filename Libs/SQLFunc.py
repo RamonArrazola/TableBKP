@@ -15,7 +15,7 @@ def SQLQuery(cnxn: any, query: str):
 
     return df
 
-def consultaSQL(uid: str, pwd: str, sqlServer: str, db: str, conn_str: str, query: str):
+def consultaSQL(uid: str, pwd: str, sqlServer: str, db: str, query: str):
     #NOTA: 
     #La consulta a SQL solo es para obtener las tablas desde SQL Server, las tablas se seguiran creando en un modelo ICM destino
     try:

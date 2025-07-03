@@ -18,9 +18,12 @@ def Neuafang():
 
         for tabla in rechazadas:
             #Obtenemos la estrictura de la tabla desde la carpeta de rechazadas
-            structure = pd.read_json(os.path.join(backupDir, modelo, 'RejectedTables', f"{tabla}.json"), orient='records')
+            with open(os.path.join(backupDir, modelo, 'RejectedTables', f"{tabla}.json"), 'r', encoding='utf-8') as f:
+                structure = json.load(f)
+            #Obtenemos el modelo PRD homonimo al modelo DEV
+            prd = obtieneHomonimo(modelo) 
             #Obtenemos el header para la peticion
-            header = getHeader(modelo, bearerToken)
+            header = getHeader(prd, bearerToken)
             #Mandamos la peticion para crear la tabla
             status = postTable(apiurl, header, structure)
 
