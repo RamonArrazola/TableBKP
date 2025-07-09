@@ -10,8 +10,8 @@ def compareDataFrames(origen: pd.DataFrame, destino: pd.DataFrame):
     return diferentes
 
 def listarInexistentesSQL(df: pd.DataFrame):
-    df = df['TableName'].unique()
-    lista = df.tolist()
+    uniqueTables = df['TableName'].unique()
+    lista = uniqueTables.tolist()
     return lista
 
 def construyeTable(name: str, table: pd.DataFrame):
